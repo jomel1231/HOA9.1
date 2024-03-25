@@ -1,0 +1,40 @@
+---
+
+- hosts: remote_servers
+  become: true
+  pre_tasks:
+
+  - name: Creaing CA dir
+    file:
+      path: "/etc/ssl"
+      state: directory
+      mode: 0700
+  - name: Creating PrivateKEy
+    openssl_privatekey:
+      path: "/etc/ssl/private/key.pem"
+      size: 4096
+      mode: 0700
+    register: cakey
+
+  - name: Generating Certificate for CA
+    openssl_csr:
+      path: "/etc/ssl/private/cert.csr"
+      privatekey_path: "/etc/ssl/private/key.pem"
+      common_name: "Seludo"
+      country_name: "ph"
+      key_usage: keyCertSign
+    register: cacert
+
+  - name: self-sign for CA certification
+    openssl_certificate:
+      path: "/etc/ssl/cert.crt"
+      csr_path: "/etc/ssl/private/cert.csr"
+      privatekey_path: "/etc/ssl/private/key.pem"
+      provider: selfsigned
+    register: signed_cacert
+
+  - name: Copy CA cert to my Destop
+    run_once: yes
+    fetch: src=/etc/ssl/cert.crt dest=~/seludo/HOA9.1/ flat=yes
+    when: ansible_distribution == "Ubuntu"
+
